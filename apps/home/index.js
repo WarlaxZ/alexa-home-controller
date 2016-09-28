@@ -13,6 +13,7 @@ const kodiPort = 9090;
 
 var mopidy = new Mopidy({ webSocketUrl: "ws://localhost:6680/mopidy/ws"});
 const app = new Alexa.app('Home');
+const imdb = require('imdb-api');
 
 app.launch(function(req, res) {
     var prompt = 'To control your home, give me a command';
@@ -104,6 +105,61 @@ function get_items_from_results(data) {
         return urisToAdd;
 }
 
+
+/////// KODI /////////////////////////////////
+
+app.intent('playFilm', {
+    'slots': {
+        'FILMNAME': 'LITERAL'
+    },
+    'utterances': ['{play|put on|watch|start playing|start} {rocky|the wolf of wallstreet|fight club|FILMNAME}']
+}, function(req, res) {
+    var itemTitle = req.slot('FILMNAME');
+    console.log(itemTitle);
+    imdb.getReq({ name: itemTitle }, function(err, item) {
+        if (err !== undefined) {
+            console.log(err);
+            res.say("Unable to find a film by the name " + itemTitle).send();
+            return true;
+        }
+        console.log(item);
+        kodi(kodiHost, kodiPort).then(function(connection) {
+            //plugin.video.exodus
+            /*
+            connection.Addons.GetAddons().then(function(addonsObject) {
+                for (var index in addonsObject.addons) {
+                    var addon = addonsObject.addons[index];
+                    console.log(addon);
+                }
+            });
+            */
+            var options = {
+                action: "play"
+            };
+            options.meta = "{}";
+            options.title = item.title;
+            options.imdb = item.imdburl;
+            if (item.episodes) { //TV
+                options.tvshowtitle = item.title;
+                options.year = item._year_data.substring(0,4);
+                options.premiered = item._year_data.substring(0,4);
+                options.season = "1";
+                options.episode = "1";
+                //options.tvdb = "http://thetvdb.com/?id=75760&tab=series";
+            } else { //Movie
+                imdb: item.imdburl,
+                options.title = item.title;
+                options.year = item._year_data;
+            }
+            console.log(options);
+            //TODO - if tv show, identify if already watching, and continue from where left off
+            connection.Addons.ExecuteAddon("plugin.video.exodus", options).then(function(response) {
+                console.log(response);
+            });
+        });
+    });
+    return false;
+});
 
 app.intent('muteKodi', {
     'slots': {},
