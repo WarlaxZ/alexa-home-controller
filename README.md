@@ -1,2 +1,2 @@
-# alexa-home-controller
-Control all items in my home from amazon's Alexa
+# Alexa-Home-Controller
+Control all items in my home from an Amazon Echo (Alexa)
