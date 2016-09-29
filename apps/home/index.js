@@ -7,13 +7,15 @@ const _ = require('lodash');
 const Alexa = require('alexa-app');
 const kodi = require('kodi-ws');
 const Mopidy = require("mopidy");
+const imdb = require('imdb-api');
+const Trakt = require('trakt-api');
 
 const kodiHost = "localhost";
 const kodiPort = 9090;
 
 var mopidy = new Mopidy({ webSocketUrl: "ws://localhost:6680/mopidy/ws"});
-const app = new Alexa.app('Home');
-const imdb = require('imdb-api');
+var app = new Alexa.app('Home');
+var trakt = Trakt("ee617ec8c3809c3629fa7b87e2106d4b93273bf44cd4fe00f7d5eb1008f629f9");
 
 app.launch(function(req, res) {
     var prompt = 'To control your home, give me a command';
