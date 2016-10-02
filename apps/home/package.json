@@ -15,6 +15,7 @@
     "kodi-ws": "^2.4.2",
     "lodash": "^4.16.0",
     "mopidy": "^0.5.0",
+    "pinkie-promise": "^2.0.1",
     "trakt.tv": "^2.0.0",
     "trakt.tv-ondeck": "^0.1.0"
   },

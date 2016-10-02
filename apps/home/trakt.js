@@ -8,6 +8,8 @@ const trakt = new Trakt({
 });
 const tokenCacheFile = "trakt-token-cache.json";
 
+const Promise = require('pinkie-promise');
+
 fs.access(tokenCacheFile, fs.F_OK, function(err) {
     if (!err) {
         loadToken();
@@ -21,8 +23,33 @@ fs.access(tokenCacheFile, fs.F_OK, function(err) {
     }
 });
 
+function getOptionsForTitle(itemTitle) {
+    return new Promise(function (resolve) {
+        trakt.search.text({
+            query: itemTitle,
+            type: 'show'
+        })
+        .then(response => {
+            if (response.length == 0) {
+                reject(null);
+            }
+            console.log(response[0]);
+            var item = response[0].show;
+            return resolve({
+                action: "play",
+                meta: "{}",
+                title: item.title,
+                imdb: item.ids.imdb,
+                tvdb: item.ids.tvdb,
+                year: item.year,
+                premiered: item.year
+            });
+        });
+    });
+}
+
 function storeToken() {
-    const token = trakt.export_token();
+    var token = trakt.export_token();
     console.log(token);
     var fs = require('fs');
     fs.writeFile(tokenCacheFile, JSON.stringify(token));
@@ -32,12 +59,34 @@ function storeToken() {
 function loadToken() {
     fs.readFile(tokenCacheFile, function(err, contents) {
         trakt.import_token(JSON.parse(contents));
-        storeToken()
+        storeToken();
     });
 }
 
 function main() {
-    trakt.ondeck.getAll().then(function (results) {
-        console.log(JSON.stringify(results));
+    getOptionsForTitle("ghost in the shell").then(function(options) {
+        console.log(options);
     });
+    /*
+    trakt.ondeck.getAll().then(function (results) {
+//        console.log(JSON.stringify(results));
+    });
+
+    trakt.search.text({
+        query: 'Below Deck',
+        type: 'movie,show'
+    })
+    .then(response => {
+        //console.log(JSON.stringify(response));
+        // Contains Array[] response from API (search data) 
+    });
+    trakt.shows.progress.watched({
+        //extended: 'full,images',
+        id: 49722,
+        hidden: false,
+        specials: false
+    }).then(function (response) {
+        console.log(JSON.stringify(response));
+    });
+    */
 }
