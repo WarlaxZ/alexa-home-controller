@@ -50,6 +50,7 @@ const kodiHost = "localhost";
 const kodiPort = 9090;
 
 //var mopidy = new Mopidy({ webSocketUrl: "ws://localhost:6680/mopidy/ws"});
+var mopidy = {}; // TEMP DISABLED
 var app = new Alexa.app('Home');
 
 app.launch(function(req, res) {
