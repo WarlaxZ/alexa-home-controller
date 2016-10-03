@@ -23,12 +23,24 @@
     "alexa-app": "^2.3.4",
     "alexa-app-server": "^2.2.4"
   },
+  "jshintConfig": {
+    "esversion": 6,
+    "ignore": [
+      {
+        "dir": "./node_modules"
+      },
+      {
+        "dir": "./apps/*/node_modules"
+      }
+    ]
+  },
   "devDependencies": {
     "chai": "^3.5.0",
     "chai-as-promised": "^5.3.0",
     "grunt": "^1.0.1",
     "grunt-contrib-jshint": "^1.0.0",
     "grunt-contrib-watch": "^1.0.0",
+    "jshint": "^2.9.3",
     "mocha": "^3.0.2"
   }
 }
