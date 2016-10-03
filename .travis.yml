@@ -7,5 +7,5 @@ before_script:
 install:
     - npm install
 script:
-    - node node_modules\grunt\bin\grunt jshint
+    - node node_modules/grunt/bin/grunt jshint
 
