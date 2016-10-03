@@ -2,6 +2,8 @@
 
 // https://github.com/PaulAvery/kodi-ws
 // https://www.bignerdranch.com/blog/developing-alexa-skills-locally-with-nodejs-deploying-your-skill-to-staging/
+//
+// NOTE TO SELF - Have made custom slots for: MOVIE, TVSHOW, SHOWORMOVIE
 
 const _ = require('lodash');
 const Alexa = require('alexa-app');
@@ -15,7 +17,6 @@ const trakt = new Trakt({
     client_secret: '91b0fe3eda36eb8f2caf131fd4184b2f81025409c5badb3c41eae293ddf36266',
     plugins: ['ondeck']
 });
-const Promise = require('pinkie-promise');
 const tokenCacheFile = "trakt-token-cache.json";
 
 fs.access(tokenCacheFile, fs.F_OK, function(err) {
@@ -117,7 +118,7 @@ app.intent('playGenre', {
 
 function get_items_from_results(data) {
         var result = data;
-        if (result.length == 0) {
+        if (result.length === 0) {
             return null;
         }
 
@@ -151,8 +152,9 @@ function getOptionsForTitle(itemTitle, tvOnly) {
             type: tvOnly ? "show" : 'show,movie'
         })
         .then(response => {
-            if (response.length == 0) {
-                reject(null);
+            if (response.length === 0) {
+                console.log(response);
+                resolve(null);
             }
             //Make the result slightly more precise
             var extraFilter = _.filter(response, function(item) {
@@ -192,7 +194,6 @@ app.intent('playFilm', {
     var itemTitle = req.slot('FILMNAME');
     getOptionsForTitle(itemTitle, false).then(function(options) {
         if (options === null) {
-            console.log(err);
             res.say("Unable to find anything by the name " + itemTitle).send();
             return true;
         }
@@ -251,7 +252,7 @@ app.intent('continueWatchingKodi', {
         type: 'show'
     })
     .then(response => {
-        if (response.length == 0) {
+        if (response.length === 0) {
             res.say("Unable to find a show by the name " + itemTitle).send();
             return true;
         }
@@ -272,7 +273,7 @@ app.intent('continueWatchingKodi', {
             if (response.hasOwnProperty("next_episode")) {
                 season = response.next_episode.season;
                 episode = response.next_episode.number;
-                var episodetitle = response.next_episode.title;
+                episodetitle = response.next_episode.title;
                 res.say("Next episode is season " + season + " episode " + episode + " titled: " + title).send();
             }
             kodi(kodiHost, kodiPort).then(function(connection) {

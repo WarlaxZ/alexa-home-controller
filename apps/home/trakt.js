@@ -8,8 +8,6 @@ const trakt = new Trakt({
 });
 const tokenCacheFile = "trakt-token-cache.json";
 
-const Promise = require('pinkie-promise');
-
 fs.access(tokenCacheFile, fs.F_OK, function(err) {
     if (!err) {
         loadToken();
@@ -30,8 +28,8 @@ function getOptionsForTitle(itemTitle) {
             type: 'show'
         })
         .then(response => {
-            if (response.length == 0) {
-                reject(null);
+            if (response.length === 0) {
+                resolve(null);
             }
             console.log(response[0]);
             var item = response[0].show;
