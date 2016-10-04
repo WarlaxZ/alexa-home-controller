@@ -146,20 +146,38 @@ function get_items_from_results(data) {
 
 /////// KODI /////////////////////////////////
 
-function getOptionsForTitle(itemTitle, tvOnly) {
+function getOptionsForTitle(req) {
+    var type = 'show,movie';
+    var season = 1;
+    var episode = 1;
+    var itemTitle = req.slot('SHOWORMOVIE', req.slot("TVSHOW", req.slot("MOVIE")));
+    if (!_.isEmpty(req.slot('TVSHOW', ""))) {
+        type = "show";
+    }
+    if (!_.isEmpty(req.slot('MOVIE', ""))) {
+        type = "movie";
+    }
+    if (!_.isEmpty(req.slot('SEASON', ""))) {
+        season = req.slot('SEASON');
+        type = "show";
+    }
+    if (!_.isEmpty(req.slot('EPISODE', ""))) {
+        episode = req.slot('EPISODE');
+        type = "show";
+    }
     return new Promise(function (resolve) {
         trakt.search.text({
             query: itemTitle,
-            type: tvOnly ? "show" : 'show,movie'
+            type: type
         })
         .then(response => {
-            if (response.length === 0) {
+            if (response === null || response.length === 0) {
                 console.log(response);
-                resolve(null);
+                resolve(itemTitle);
             }
             //Make the result slightly more precise
             var extraFilter = _.filter(response, function(item) {
-                return item[item.type].title.indexOf(itemTitle) !== -1;
+                return item[item.type].ids.imdb !== null && item[item.type].title.toLowerCase().indexOf(itemTitle.toLowerCase()) !== -1;
             });
             if (extraFilter.length !== 0) {
                 response = extraFilter;
@@ -179,58 +197,72 @@ function getOptionsForTitle(itemTitle, tvOnly) {
             };
             if (showOrMovie == "show") {
                 options.tvshowtitle = options.title;
+
+                if (_.isEmpty(req.slot('SEASON')) && _.isEmpty(req.slot('EPISODE'))) {
+                    trakt.shows.progress.watched({
+                        id: item.ids.trakt,
+                        hidden: false,
+                        specials: false
+                    }).then(function (response) {
+                        var episodetitle = "";
+                        if (response.hasOwnProperty("next_episode")) {
+                            if (_.isEmpty(req.slot('EPISODE', ""))) {
+                                episode = response.next_episode.number;
+                            }
+                            if (_.isEmpty(req.slot('SEASON', ""))) {
+                                season = response.next_episode.season;
+                            }
+                            //episodetitle = response.next_episode.title;
+                            //res.say("Next episode is season " + season + " episode " + episode + " titled: " + title).send();
+                        }
+                        if (!_.isEmpty(req.slot('SEASON', ""))) {
+                            season = req.slot('SEASON');
+                        }
+                        if (!_.isEmpty(req.slot('EPISODE', ""))) {
+                            episode = req.slot('EPISODE');
+                        }
+                        options.season = "" + season;
+                        options.episode = "" + episode;
+                        return resolve(options);
+                    });
+                } else {
+                    options.season = season;
+                    options.episode = episode;
+                    return resolve(options);
+                }
+            } else {
+                return resolve(options);
             }
-            return resolve(options);
         });
     });
 }
 
 
-app.intent('playFilm', {
+app.intent('playKodi', {
     'slots': {
-        'FILMNAME': 'LITERAL'
-    },
-    'utterances': ['{play|put on|watch|start playing|start} {rocky|the wolf of wallstreet|fight club|FILMNAME}']
-}, function(req, res) {
-    var itemTitle = req.slot('FILMNAME');
-    getOptionsForTitle(itemTitle, false).then(function(options) {
-        if (options === null) {
-            res.say("Unable to find anything by the name " + itemTitle).send();
-            return true;
-        }
-        kodi(kodiHost, kodiPort).then(function(connection) {
-            if (options.type == "show") {
-                options.tvshowtitle = options.title;
-                options.season = "1";
-                options.episode = "1";
-            }
-            console.log(options);
-            //TODO - if tv show, identify if already watching, and continue from where left off
-            connection.Addons.ExecuteAddon("plugin.video.exodus", options).then(function(response) {
-                console.log(response);
-                return true;
-            });
-        });
-    });
-    return false;
-});
-
-
-app.intent('playEpisodeKodi', {
-    'slots': {
-        'SHOWNAME': 'LITERAL',
+        'MOVIE': 'MOVIE',
+        'TVSHOW': 'TVSHOW',
+        'SHOWORMOVIE': 'SHOWORMOVIE',
         'SEASON': 'NUMBER',
         'EPISODE': 'NUMBER'
     },
-    'utterances': ['{play|put on|watch|start playing|start|start watching} season {1|2|3|one|two|three|SEASON} episode {1|2|3|one|two|three|EPISODE} of {below deck|fairy tale|ghost in the shell|lost|SHOWNAME}']
+    'utterances': [
+        '{play|put on|watch|start playing|start|start watching} the {film|movie} {-|MOVIE}',
+        '{play|put on|watch|start playing|start|start watching} {-|MOVIE} {film|movie}',
+        '{play|put on|watch|start playing|start|start watching} {-|SHOWORMOVIE}',
+        '{play|put on|watch|start playing|start|start watching} season {-|SEASON} of {-|TVSHOW}',
+        '{play|put on|watch|start playing|start|start watching} episode {-|EPISODE} of {-|TVSHOW}',
+        '{play|put on|watch|start playing|start|start watching} season {-|SEASON} episode {-|EPISODE} of {-|TVSHOW}',
+        '{continue|continue watching|play|put on|watch|start playing|start|start watching} {the |} next {-|TVSHOW}'
+    ]
 }, function(req, res) {
-    var itemTitle = req.slot('SHOWNAME');
-    getOptionsForTitle(itemTitle, false).then(function(options) {
+    getOptionsForTitle(req).then(function(options) {
+        if (typeof(options) == "string") {
+            res.say("Unable to find anything by the name " + options).send();
+            return true;
+        }
+        console.log(options);
         kodi(kodiHost, kodiPort).then(function(connection) {
-            //options.tvshowtitle = options.title;
-            options.season = req.slot('SEASON');
-            options.episode = req.slot('EPISODE');
-            console.log(options);
             connection.Addons.ExecuteAddon("plugin.video.exodus", options).then(function(response) {
                 console.log(response);
                 return true;
@@ -241,67 +273,44 @@ app.intent('playEpisodeKodi', {
     return false;
 });
 
-app.intent('continueWatchingKodi', {
-    'slots': {
-        'SHOWNAME': 'LITERAL'
-    },
-    'utterances': ['{continue|continue watching|play|put on|watch|start playing|start|start watching} {the |} next {below deck|fairy tale|ghost in the shell|lost|SHOWNAME}']
+
+//TODO - combine these 3 with a custom slot
+app.intent('popularKodi', {
+    'slots': {},
+    'utterances': ['{show me|pull up|display|load|on screen|show} {what\'s|what is|what} popular']
 }, function(req, res) {
-    var itemTitle = req.slot('SHOWNAME');
-    trakt.search.text({
-        query: itemTitle,
-        type: 'show'
-    })
-    .then(response => {
-        if (response.length === 0) {
-            res.say("Unable to find a show by the name " + itemTitle).send();
+    kodi(kodiHost, kodiPort).then(function(connection) {
+        connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "popular"}).then(function(response) {
             return true;
-        }
-        var item = response[0].show;
-        var title = item.title;
-        var year = item.year;
-        var traktId = item.ids.trakt;
-        var imdb = item.ids.imdb;
-        var tvdb = item.ids.tvdb;
-        trakt.shows.progress.watched({
-            id: traktId,
-            hidden: false,
-            specials: false
-        }).then(function (response) {
-            var season = 1;
-            var episode = 1;
-            var episodetitle = "";
-            if (response.hasOwnProperty("next_episode")) {
-                season = response.next_episode.season;
-                episode = response.next_episode.number;
-                episodetitle = response.next_episode.title;
-                res.say("Next episode is season " + season + " episode " + episode + " titled: " + title).send();
-            }
-            kodi(kodiHost, kodiPort).then(function(connection) {
-                var options = {
-                    action: "play",
-                    meta: "{}",
-                    title: title,
-                    tvshowtitle: episodetitle,
-                    imdb: imdb,
-                    tvdb: tvdb,
-                    year: year.toString(),
-                    premiered: year.toString(),
-                    season: season,
-                    episode: episode
-                };
-                console.log(options);
-                connection.Addons.ExecuteAddon("plugin.video.exodus", options).then(function(response) {
-                    console.log(response);
-                    return true;
-                });
-            });
-
         });
-
     });
     return false;
 });
+
+app.intent('trendingKodi', {
+    'slots': {},
+    'utterances': ['{show me|pull up|display|load|on screen|show} {what\'s|what is|what} trending']
+}, function(req, res) {
+    kodi(kodiHost, kodiPort).then(function(connection) {
+        connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "trending"}).then(function(response) {
+            return true;
+        });
+    });
+    return false;
+});
+
+app.intent('featuredKodi', {
+    'slots': {},
+    'utterances': ['{show me|pull up|display|load|on screen|show} {what\'s|what is|what} featured']
+}, function(req, res) {
+    kodi(kodiHost, kodiPort).then(function(connection) {
+        connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "featured"}).then(function(response) {
+            return true;
+        });
+    });
+    return false;
+});
+
 
 app.intent('muteKodi', {
     'slots': {},
@@ -340,11 +349,13 @@ app.intent('stop', {
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         return connection.Player.GetActivePlayers().then(function (players) {
+            connection.GUI.ActivateWindow("home");
             return Promise.all(players.map(function(player) {
                 return connection.Player.Stop(player.playerid);
             }));
         });
     });
+    return false;
 });
 
 
