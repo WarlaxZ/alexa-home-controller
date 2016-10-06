@@ -51,7 +51,7 @@ const kodiPort = 9090;
 
 //var mopidy = new Mopidy({ webSocketUrl: "ws://localhost:6680/mopidy/ws"});
 var mopidy = {}; // TEMP DISABLED
-var app = new Alexa.app('Home');
+var app = new Alexa.app('home');
 
 app.launch(function(req, res) {
     var prompt = 'To control your home, give me a command';
@@ -150,7 +150,17 @@ function getOptionsForTitle(req) {
     var type = 'show,movie';
     var season = 1;
     var episode = 1;
-    var itemTitle = req.slot('SHOWORMOVIE', req.slot("TVSHOW", req.slot("MOVIE")));
+    var itemTitle;
+    if (!_.isEmpty(req.slot('SHOWORMOVIE', "")))
+        itemTitle = req.slot('SHOWORMOVIE');
+    else if (!_.isEmpty(req.slot('TVSHOW', "")))
+        itemTitle = req.slot('TVSHOW');
+    else if (!_.isEmpty(req.slot('MOVIE', "")))
+        itemTitle = req.slot('MOVIE');
+    console.log(req.slot('SHOWORMOVIE', ""));
+    console.log(req.slot('TVSHOW', ""));
+    console.log(req.slot('MOVIE', ""));
+    console.log("Asked for title: %s", itemTitle);
     if (!_.isEmpty(req.slot('TVSHOW', ""))) {
         type = "show";
     }
@@ -175,6 +185,8 @@ function getOptionsForTitle(req) {
                 console.log(response);
                 resolve(itemTitle);
             }
+            console.log("Trakt Responses:");
+            console.log(response);
             //Make the result slightly more precise
             var extraFilter = _.filter(response, function(item) {
                 return item[item.type].ids.imdb !== null && item[item.type].title.toLowerCase().indexOf(itemTitle.toLowerCase()) !== -1;
@@ -184,55 +196,74 @@ function getOptionsForTitle(req) {
             }
             var showOrMovie = response[0].type;
             var item = response[0][showOrMovie];
-            var options = {
-                action: "play",
-                type: showOrMovie,
-                meta: "{}",
-                title: item.title,
-                imdb: item.ids.imdb,
-                //tvdb: item.ids.tvdb,
-                year: "" + item.year,
-                //premiered: "1989" //item.year,
-                select: "2"
-            };
-            if (showOrMovie == "show") {
-                options.tvshowtitle = options.title;
-
-                if (_.isEmpty(req.slot('SEASON')) && _.isEmpty(req.slot('EPISODE'))) {
-                    trakt.shows.progress.watched({
-                        id: item.ids.trakt,
-                        hidden: false,
-                        specials: false
-                    }).then(function (response) {
-                        var episodetitle = "";
-                        if (response.hasOwnProperty("next_episode")) {
-                            if (_.isEmpty(req.slot('EPISODE', ""))) {
-                                episode = response.next_episode.number;
-                            }
-                            if (_.isEmpty(req.slot('SEASON', ""))) {
-                                season = response.next_episode.season;
-                            }
-                            //episodetitle = response.next_episode.title;
-                            //res.say("Next episode is season " + season + " episode " + episode + " titled: " + title).send();
-                        }
-                        if (!_.isEmpty(req.slot('SEASON', ""))) {
-                            season = req.slot('SEASON');
-                        }
-                        if (!_.isEmpty(req.slot('EPISODE', ""))) {
-                            episode = req.slot('EPISODE');
-                        }
-                        options.season = "" + season;
-                        options.episode = "" + episode;
-                        return resolve(options);
+            var imdbId = item.ids.imdb;
+            //For some reason trakt doesn't always return a imdb, this breaks exodus
+            if (imdbId === null) {
+                imdbId = new Promise(function (resolve) {
+                    imdb.get(item.title, function(err, things) {
+                        resolve(things.imdbid);
                     });
+                });
+            } else {
+                imdbId = new Promise(function (resolve) {
+                     resolve(imdbId);
+                });
+            }
+            imdbId.then(function(imdbId) {
+                console.log("Trakt Response:");
+                console.log(response[0]);
+                var options = {
+                    action: "play",
+                    type: showOrMovie,
+                    meta: "{}",
+                    title: item.title,
+                    imdb: imdbId,
+                    //tvdb: item.ids.tvdb,
+                    year: "" + item.year,
+                    //premiered: "" + item.year,
+                    select: "2"
+                };
+                if (showOrMovie == "show") {
+                    options.tvshowtitle = options.title;
+
+                    if (_.isEmpty(req.slot('SEASON')) && _.isEmpty(req.slot('EPISODE'))) {
+                        trakt.shows.progress.watched({
+                            id: item.ids.trakt,
+                            hidden: false,
+                            specials: false
+                        }).then(function (response) {
+                            var episodetitle = "";
+                            if (response.hasOwnProperty("next_episode")) {
+                                console.log("Next episode:");
+                                console.log(response.next_episode);
+                                if (_.isEmpty(req.slot('EPISODE', ""))) {
+                                    episode = response.next_episode.number;
+                                }
+                                if (_.isEmpty(req.slot('SEASON', ""))) {
+                                    season = response.next_episode.season;
+                                }
+                                //episodetitle = response.next_episode.title;
+                                //res.say("Next episode is season " + season + " episode " + episode + " titled: " + title).send();
+                            }
+                            if (!_.isEmpty(req.slot('SEASON', ""))) {
+                                season = req.slot('SEASON');
+                            }
+                            if (!_.isEmpty(req.slot('EPISODE', ""))) {
+                                episode = req.slot('EPISODE');
+                            }
+                            options.season = "" + season;
+                            options.episode = "" + episode;
+                            return resolve(options);
+                        });
+                    } else {
+                        options.season = season;
+                        options.episode = episode;
+                        return resolve(options);
+                    }
                 } else {
-                    options.season = season;
-                    options.episode = episode;
                     return resolve(options);
                 }
-            } else {
-                return resolve(options);
-            }
+            });
         });
     });
 }
@@ -243,8 +274,8 @@ app.intent('playKodi', {
         'MOVIE': 'MOVIE',
         'TVSHOW': 'TVSHOW',
         'SHOWORMOVIE': 'SHOWORMOVIE',
-        'SEASON': 'NUMBER',
-        'EPISODE': 'NUMBER'
+        'SEASON': 'AMAZON.NUMBER',
+        'EPISODE': 'AMAZON.NUMBER'
     },
     'utterances': [
         '{play|put on|watch|start playing|start|start watching} the {film|movie} {-|MOVIE}',
@@ -253,7 +284,7 @@ app.intent('playKodi', {
         '{play|put on|watch|start playing|start|start watching} season {-|SEASON} of {-|TVSHOW}',
         '{play|put on|watch|start playing|start|start watching} episode {-|EPISODE} of {-|TVSHOW}',
         '{play|put on|watch|start playing|start|start watching} season {-|SEASON} episode {-|EPISODE} of {-|TVSHOW}',
-        '{continue|continue watching|play|put on|watch|start playing|start|start watching} {the |} next {-|TVSHOW}'
+        '{continue|continue watching|play|put on|watch|start playing|start|start watching} {the |} next{ episode|} {-|TVSHOW}'
     ]
 }, function(req, res) {
     getOptionsForTitle(req).then(function(options) {
@@ -265,6 +296,7 @@ app.intent('playKodi', {
         kodi(kodiHost, kodiPort).then(function(connection) {
             connection.Addons.ExecuteAddon("plugin.video.exodus", options).then(function(response) {
                 console.log(response);
+                res.say("Putting on " + options.title).send();
                 return true;
             });
             return true;
@@ -281,6 +313,7 @@ app.intent('popularKodi', {
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "popular"}).then(function(response) {
+            res.say("Pulling up whats popular").send();
             return true;
         });
     });
@@ -293,6 +326,7 @@ app.intent('trendingKodi', {
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "trending"}).then(function(response) {
+            res.say("Pulling up whats trending").send();
             return true;
         });
     });
@@ -305,6 +339,7 @@ app.intent('featuredKodi', {
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "featured"}).then(function(response) {
+            res.say("Pulling up whats featured").send();
             return true;
         });
     });
@@ -335,9 +370,9 @@ app.intent('pauseResume', {
     'utterances': ['{pause|unpause|resume}{ kodi| tv| movie| show| playback|}']
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
-        return connection.Player.GetActivePlayers().then(function (players) {
-            return Promise.all(players.map(function(player) {
-                return connection.Player.PlayPause(player.playerid);
+        connection.Player.GetActivePlayers().then(function (players) {
+            Promise.all(players.map(function(player) {
+                connection.Player.PlayPause(player.playerid);
             }));
         });
     });
@@ -351,11 +386,10 @@ app.intent('stop', {
         return connection.Player.GetActivePlayers().then(function (players) {
             connection.GUI.ActivateWindow("home");
             return Promise.all(players.map(function(player) {
-                return connection.Player.Stop(player.playerid);
+                connection.Player.Stop(player.playerid);
             }));
         });
     });
-    return false;
 });
 
 
