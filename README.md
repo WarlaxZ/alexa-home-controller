@@ -14,4 +14,13 @@ FAQ
 - Open a port on your router to the server, and set it up within alexa
 - Tweak apps/home/index.js to point to your kodi if its not running on localhost
 
+
+How to Run
+- You need node installed
+- Then run the following commands:
+- npm install -g grunt
+- grunt
+- node server.js
+- Then just ask alexa what ever you named your skill
+
 Leave questions in the issues place and I'll update the readme :P
