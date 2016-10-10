@@ -1,7 +1,8 @@
 {
   "name": "mopidy",
   "version": "1.0.0",
-  "description": "",
+  "description": "For controlling mopidy from alexa. Search by artist, control volume and play playlists at random :)",
+  "repository": "https://github.com/WarlaxZ/alexa-home-controller",
   "main": "index.js",
   "scripts": {
     "test": "mocha"

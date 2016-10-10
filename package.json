@@ -40,6 +40,7 @@
     "grunt": "^1.0.1",
     "grunt-contrib-jshint": "^1.0.0",
     "grunt-contrib-watch": "^1.0.0",
+    "grunt-npm-install-all": "^0.1.0",
     "jshint": "^2.9.3",
     "mocha": "^3.0.2"
   }

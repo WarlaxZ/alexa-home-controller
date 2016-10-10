@@ -11,6 +11,6 @@ var config = {
     "bluetooth": {
         "default": "bluez_sink.00_15_83_6B_63_41"
     }
-}
+};
 
 module.exports = config;

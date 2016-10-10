@@ -18,9 +18,14 @@ module.exports = function(grunt) {
                     'apps/**/node_modules/**/*.js'
                 ]
              }
-         }
+         },
+         'npm-install-all': {
+            src: ['apps/**'],
+         },
      });
     // Each plugin must be loaded following this pattern
     grunt.loadNpmTasks('grunt-contrib-jshint');
+    grunt.loadNpmTasks('grunt-npm-install-all');
 
+    grunt.registerTask('default', ['jshint', 'npm-install-all']);
 };

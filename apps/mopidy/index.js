@@ -116,7 +116,7 @@ app.intent('playMusic', {
     }
     else if (!_.isEmpty(req.slot('GENRE', ""))) {
         query = req.slot('GENRE');
-        searchBy = "genre"
+        searchBy = "genre";
     }
     console.log("Asked for: %s", query);
 
@@ -165,7 +165,7 @@ function stopAndClear() {
             });
         });
     });
-};
+}
 
 function loadAndShuffle(urisToAdd, limit) {
     return new Promise(function (resolve) {
