@@ -8,7 +8,6 @@
 const _ = require('lodash');
 const Alexa = require('alexa-app');
 const kodi = require('kodi-ws');
-const Mopidy = require("mopidy");
 const imdb = require('imdb-api');
 const fs = require('fs');
 const Trakt = require('trakt.tv');
@@ -49,102 +48,13 @@ function loadToken() {
 const kodiHost = "localhost";
 const kodiPort = 9090;
 
-//var mopidy = new Mopidy({ webSocketUrl: "ws://localhost:6680/mopidy/ws"});
-var mopidy = {}; // TEMP DISABLED
-var app = new Alexa.app('home');
+var app = new Alexa.app('kodi');
 
 app.launch(function(req, res) {
     var prompt = 'To control your home, give me a command';
     res.say(prompt).reprompt(prompt).shouldEndSession(false);
 });
 
-app.intent('playRandom', {
-    'slots': {},
-    'utterances': ['{play|put on|play me|listen to} {some |}music']
-}, function(req, res) {
-    res.say("Playing some music").send();
-    return false;
-});
-
-app.intent('playPlaylist', {
-    'slots': {
-        'PLAYLISTNAME': 'LITERAL'
-    },
-    'utterances': ['{play|put on|play me|listen to} {my |the |}{ashes tunes|dance|PLAYLISTNAME} playlist']
-}, function(req, res) {
-    var playlistName = req.slot('PLAYLISTNAME');
-    var reprompt = 'Tell me the playlist name you want to play.';
-    if (_.isEmpty(playlistName)) {
-        var prompt = 'I didn\'t hear a playlist name, please tell me one.';
-        res.say(prompt).reprompt(reprompt).shouldEndSession(false);
-        return true;
-    } else {
-        res.say("Playing playlist").send();
-        return false;
-    }
-});
-
-app.intent('playGenre', {
-    'slots': {
-        'GENRE': 'LITERAL'
-    },
-    'utterances': ['{play|put on|play me|listen to} {some |}{house|dance|drum and bass|piano|chill|chill out|reggae|GENRE}{| music}']
-}, function(req, res) {
-    var genre = req.slot('GENRE');
-    var reprompt = 'Tell me the genre you want to play.';
-    if (_.isEmpty(genre)) {
-        var prompt = 'I didn\'t hear a genre name, please tell me one.';
-        res.say(prompt).reprompt(reprompt).shouldEndSession(false);
-        return true;
-    } else {
-        mopidy.library.search({"genre": [genre]}).then(function(data) { //, "uris": ["spotify:"]
-            var urisToAdd = get_items_from_results(data);
-            if (urisToAdd ===  null) {
-                res.say("Nothing found matching query!").send();
-                return true;
-            }
-            //Note working up until this point, but the js library is shit and cant handle multiple urls
-            mopidy.tracklist.add({"uris":urisToAdd}).then(function(data) {
-                mopidy.tracklist.shuffle().then(function(data){
-                    mopidy.playback.play().then(function(data){
-                        res.say("Playing genre " + genre).send();
-                        return true;
-                    });
-                });
-            });
-        });
-        return false; //False means async function, ie some talking will happen in the promise return
-    }
-});
-
-function get_items_from_results(data) {
-        var result = data;
-        if (result.length === 0) {
-            return null;
-        }
-
-        var urisToAdd = [];
-        for (var searchResultTypeIndex in result) {
-            var searchResultType = result[searchResultTypeIndex];
-            for (var resultKey in searchResultType) {
-                if (resultKey.startsWith("_") || resultKey === "uri") {
-                    continue;
-                }
-                for (var index in searchResultType[resultKey]) {
-                    var item = searchResultType[resultKey][index];
-                    try {
-                        urisToAdd.push(item.uri);
-                    } catch (err) {
-                        //Ignore this item
-                    }
-                }
-            }
-        }
-        return urisToAdd;
-}
-
-
-/////// KODI /////////////////////////////////
 
 function getOptionsForTitle(req) {
     var type = 'show,movie';
@@ -157,9 +67,6 @@ function getOptionsForTitle(req) {
         itemTitle = req.slot('TVSHOW');
     else if (!_.isEmpty(req.slot('MOVIE', "")))
         itemTitle = req.slot('MOVIE');
-    console.log(req.slot('SHOWORMOVIE', ""));
-    console.log(req.slot('TVSHOW', ""));
-    console.log(req.slot('MOVIE', ""));
     console.log("Asked for title: %s", itemTitle);
     if (!_.isEmpty(req.slot('TVSHOW', ""))) {
         type = "show";
@@ -199,14 +106,14 @@ function getOptionsForTitle(req) {
             var imdbId = item.ids.imdb;
             //For some reason trakt doesn't always return a imdb, this breaks exodus
             if (imdbId === null) {
-                imdbId = new Promise(function (resolve) {
+                imdbId = new Promise(function (resolveImdb) {
                     imdb.get(item.title, function(err, things) {
-                        resolve(things.imdbid);
+                        resolveImdb(things.imdbid);
                     });
                 });
             } else {
-                imdbId = new Promise(function (resolve) {
-                     resolve(imdbId);
+                imdbId = new Promise(function (resolveImdb) {
+                     resolveImdb(imdbId);
                 });
             }
             imdbId.then(function(imdbId) {
@@ -290,16 +197,14 @@ app.intent('playKodi', {
     getOptionsForTitle(req).then(function(options) {
         if (typeof(options) == "string") {
             res.say("Unable to find anything by the name " + options).send();
-            return true;
+            return;
         }
         console.log(options);
         kodi(kodiHost, kodiPort).then(function(connection) {
             connection.Addons.ExecuteAddon("plugin.video.exodus", options).then(function(response) {
                 console.log(response);
                 res.say("Putting on " + options.title).send();
-                return true;
             });
-            return true;
         });
     });
     return false;
@@ -309,12 +214,11 @@ app.intent('playKodi', {
 //TODO - combine these 3 with a custom slot
 app.intent('popularKodi', {
     'slots': {},
-    'utterances': ['{show me|pull up|display|load|on screen|show} {what\'s|what is|what} popular']
+    'utterances': ['{show me|pull up|display|load|on screen|show|}{ what\'s| what is| what|whats} popular']
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "popular"}).then(function(response) {
             res.say("Pulling up whats popular").send();
-            return true;
         });
     });
     return false;
@@ -322,12 +226,11 @@ app.intent('popularKodi', {
 
 app.intent('trendingKodi', {
     'slots': {},
-    'utterances': ['{show me|pull up|display|load|on screen|show} {what\'s|what is|what} trending']
+    'utterances': ['{show me|pull up|display|load|on screen|show|}{ what\'s| what is| what|whats} trending']
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "trending"}).then(function(response) {
             res.say("Pulling up whats trending").send();
-            return true;
         });
     });
     return false;
@@ -335,12 +238,11 @@ app.intent('trendingKodi', {
 
 app.intent('featuredKodi', {
     'slots': {},
-    'utterances': ['{show me|pull up|display|load|on screen|show} {what\'s|what is|what} featured']
+    'utterances': ['{show me|pull up|display|load|on screen|show|}{ what\'s| what is| what|whats} featured']
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "featured"}).then(function(response) {
             res.say("Pulling up whats featured").send();
-            return true;
         });
     });
     return false;
