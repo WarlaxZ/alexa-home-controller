@@ -14,6 +14,9 @@ var mopidy = new Mopidy({
 
 
 var app = new Alexa.app('mopidy');
+app.dictionary = {
+    "put on": ["play", "put on", "play me", "listen to"]
+};
 
 app.launch(function(req, res) {
     var prompt = 'To control mopidy, give me a command';
@@ -71,8 +74,8 @@ app.intent('playPlaylist', {
         'PLAYLISTNAME': 'LITERAL'
     },
     'utterances': [
-        '{play|put on|play me|listen to} {some music|music|something random|random|something}',
-        '{play|put on|play me|listen to} {my |the |}{ashes tunes|dance|PLAYLISTNAME} playlist'
+        '{put on} {some music|music|something random|random|something}',
+        '{put on} {my |the |}{ashes tunes|dance|PLAYLISTNAME} playlist'
     ]
 }, function(req, res) {
     var playlistName = req.slot('PLAYLISTNAME', undefined);
@@ -99,9 +102,9 @@ app.intent('playMusic', {
         'ARTIST': 'LITERAL'
     },
     'utterances': [
-        '{play|put on|play me|listen to} {some |}{-|GENRE}{| music}',
-        '{play|put on|play me|listen to} {dirty love|wilkinson|andy c|rock it|call me maybe|TRACK}',
-        '{play|put on|play me|listen to} {some |}{music by|something by|anything by} {wilkinson|andy c|shy fx|ARTIST}'
+        '{put on} {some |}{-|GENRE}{| music}',
+        '{put on} {dirty love|wilkinson|andy c|rock it|call me maybe|TRACK}',
+        '{put on} {some |}{music by|something by|anything by} {wilkinson|andy c|shy fx|ARTIST}'
     ]
 }, function(req, res) {
     var query;

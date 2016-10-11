@@ -49,6 +49,11 @@ const kodiHost = "localhost";
 const kodiPort = 9090;
 
 var app = new Alexa.app('kodi');
+app.dictionary = {
+    "put on": ["play", "put on", "watch", "start playing", "start", "start watching"],
+    "pull up": ["show me", "pull up", "display", "load", "on screen", "show"]
+};
+
 
 app.launch(function(req, res) {
     var prompt = 'To control your home, give me a command';
@@ -181,17 +186,17 @@ app.intent('playKodi', {
         'MOVIE': 'MOVIE',
         'TVSHOW': 'TVSHOW',
         'SHOWORMOVIE': 'SHOWORMOVIE',
-        'SEASON': 'AMAZON.NUMBER',
-        'EPISODE': 'AMAZON.NUMBER'
+        'SEASON': 'NUMBER',
+        'EPISODE': 'NUMBER'
     },
     'utterances': [
-        '{play|put on|watch|start playing|start|start watching} the {film|movie} {-|MOVIE}',
-        '{play|put on|watch|start playing|start|start watching} {-|MOVIE} {film|movie}',
-        '{play|put on|watch|start playing|start|start watching} {-|SHOWORMOVIE}',
-        '{play|put on|watch|start playing|start|start watching} season {-|SEASON} of {-|TVSHOW}',
-        '{play|put on|watch|start playing|start|start watching} episode {-|EPISODE} of {-|TVSHOW}',
-        '{play|put on|watch|start playing|start|start watching} season {-|SEASON} episode {-|EPISODE} of {-|TVSHOW}',
-        '{continue|continue watching|play|put on|watch|start playing|start|start watching} {the |} next{ episode|} {-|TVSHOW}'
+        '{put on} the {film|movie} {-|MOVIE}',
+        '{put on} {-|MOVIE} {film|movie}',
+        '{put on} {-|SHOWORMOVIE}',
+        '{put on} season {-|SEASON} of {-|TVSHOW}',
+        '{put on} episode {-|EPISODE} of {-|TVSHOW}',
+        '{put on} season {-|SEASON} episode {-|EPISODE} of {-|TVSHOW}',
+        '{continue|continue watching|put on} {the |} next{ episode|} {-|TVSHOW}'
     ]
 }, function(req, res) {
     getOptionsForTitle(req).then(function(options) {
@@ -214,7 +219,7 @@ app.intent('playKodi', {
 //TODO - combine these 3 with a custom slot
 app.intent('popularKodi', {
     'slots': {},
-    'utterances': ['{show me|pull up|display|load|on screen|show|}{ what\'s| what is| what|whats} popular']
+    'utterances': ['{pull up|}{ what\'s| what is| what|whats} popular']
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "popular"}).then(function(response) {
@@ -226,7 +231,7 @@ app.intent('popularKodi', {
 
 app.intent('trendingKodi', {
     'slots': {},
-    'utterances': ['{show me|pull up|display|load|on screen|show|}{ what\'s| what is| what|whats} trending']
+    'utterances': ['{pull up|}{ what\'s| what is| what|whats} trending']
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "trending"}).then(function(response) {
@@ -238,7 +243,7 @@ app.intent('trendingKodi', {
 
 app.intent('featuredKodi', {
     'slots': {},
-    'utterances': ['{show me|pull up|display|load|on screen|show|}{ what\'s| what is| what|whats} featured']
+    'utterances': ['{pull up|}{ what\'s| what is| what|whats} featured']
 }, function(req, res) {
     kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "featured"}).then(function(response) {
