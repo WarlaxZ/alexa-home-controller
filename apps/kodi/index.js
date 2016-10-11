@@ -14,7 +14,7 @@ const Trakt = require('trakt.tv');
 const trakt = new Trakt({
     client_id: 'ee617ec8c3809c3629fa7b87e2106d4b93273bf44cd4fe00f7d5eb1008f629f9',
     client_secret: '91b0fe3eda36eb8f2caf131fd4184b2f81025409c5badb3c41eae293ddf36266',
-    plugins: ['ondeck']
+    plugins: []
 });
 const tokenCacheFile = "trakt-token-cache.json";
 
