@@ -1,3 +1,4 @@
 **/node_modules
 /recording.wav
 /apps/home/trakt-token-cache.json
+*trakt-token-cache*.json
