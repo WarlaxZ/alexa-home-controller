@@ -10,7 +10,7 @@ FAQ
 - Make sure you enable trakt in exodus
 - Set up exodus to mark watched in trakt
 - Upload the custom slots from apps/home
-- Run the server (node server.js) and then hit http://localhost:8081/apps/home and copy the utterances and schema to alexa dev area
+- Run the server (node server.js) and then hit http://localhost:8081/apps/kodi and copy the utterances and schema to alexa dev area
 - Open a port on your router to the server, and set it up within alexa
 - Tweak apps/home/index.js to point to your kodi if its not running on localhost
 
