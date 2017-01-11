@@ -13,6 +13,7 @@ FAQ
 - Run the server (node server.js) and then hit http://localhost:8081/apps/kodi and copy the utterances and schema to alexa dev area
 - Open a port on your router to the server, and set it up within alexa
 - Tweak apps/home/index.js to point to your kodi if its not running on localhost
+- Although this could run on lambda, please don't, as that would involve opening your kodi on port 9090 to the world, which is a very, very bad idea
 
 
 How to Run
