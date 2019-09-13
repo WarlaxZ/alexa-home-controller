@@ -21,7 +21,8 @@
   "license": "ISC",
   "dependencies": {
     "alexa-app": "^2.3.4",
-    "alexa-app-server": "^2.2.4"
+    "alexa-app-server": "^2.2.4",
+    "grunt-cli": "^1.2.0"
   },
   "jshintConfig": {
     "esversion": 6,

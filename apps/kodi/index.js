@@ -205,52 +205,60 @@ app.intent('playKodi', {
             return;
         }
         console.log(options);
-        kodi(kodiHost, kodiPort).then(function(connection) {
+        return kodi(kodiHost, kodiPort).then(function(connection) {
             connection.Addons.ExecuteAddon("plugin.video.exodus", options).then(function(response) {
                 console.log(response);
                 res.say("Putting on " + options.title).send();
             });
         });
     });
-    return false;
 });
 
+app.intent('searchTVKodi', {
+    'slots': {},
+    'utterances': ['search {for |for the |}{TV|tv|television|programs|series} {for |}{-|TVSHOW}']
+}, function(req, res) {
+    return kodi(kodiHost, kodiPort).then(function(connection) {
+        connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "tvSearch"}).then(function(response) {
+	    //connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "tvSearch"}).then(function(response) {
+                res.say("Searching").send();
+            //});
+        });
+    });
+});
 
 //TODO - combine these 3 with a custom slot
 app.intent('popularKodi', {
     'slots': {},
     'utterances': ['{pull up|}{ what\'s| what is| what|whats} popular']
 }, function(req, res) {
-    kodi(kodiHost, kodiPort).then(function(connection) {
+    return kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "popular"}).then(function(response) {
             res.say("Pulling up whats popular").send();
         });
     });
-    return false;
 });
 
 app.intent('trendingKodi', {
     'slots': {},
     'utterances': ['{pull up|}{ what\'s| what is| what|whats} trending']
 }, function(req, res) {
-    kodi(kodiHost, kodiPort).then(function(connection) {
+    return kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "trending"}).then(function(response) {
             res.say("Pulling up whats trending").send();
         });
     });
-    return false;
 });
 
 app.intent('featuredKodi', {
     'slots': {},
     'utterances': ['{pull up|}{ what\'s| what is| what|whats} featured']
 }, function(req, res) {
-    kodi(kodiHost, kodiPort).then(function(connection) {
+    return kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Addons.ExecuteAddon("plugin.video.exodus", {"action": "movies", "url": "featured"}).then(function(response) {
             res.say("Pulling up whats featured").send();
         });
     });
-    return false;
 });
 
 
@@ -258,7 +266,7 @@ app.intent('muteKodi', {
     'slots': {},
     'utterances': ['{mute|silence|quiet}{ kodi| tv| movie| show|}']
 }, function(req, res) {
-    kodi(kodiHost, kodiPort).then(function(connection) {
+    return kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Application.SetMute(true);
     });
 });
@@ -267,7 +275,7 @@ app.intent('unmuteKodi', {
     'slots': {},
     'utterances': ['{unmute|noise|make noise|sound}{ kodi| tv| movie| show|}']
 }, function(req, res) {
-    kodi(kodiHost, kodiPort).then(function(connection) {
+    return kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Application.SetMute(false);
     });
 });
@@ -276,7 +284,7 @@ app.intent('pauseResume', {
     'slots': {},
     'utterances': ['{pause|unpause|resume}{ kodi| tv| movie| show| playback|}']
 }, function(req, res) {
-    kodi(kodiHost, kodiPort).then(function(connection) {
+    return kodi(kodiHost, kodiPort).then(function(connection) {
         connection.Player.GetActivePlayers().then(function (players) {
             Promise.all(players.map(function(player) {
                 connection.Player.PlayPause(player.playerid);
@@ -289,7 +297,7 @@ app.intent('stop', {
     'slots': {},
     'utterances': ['stop{ kodi| tv| movie| show| playback|}']
 }, function(req, res) {
-    kodi(kodiHost, kodiPort).then(function(connection) {
+    return kodi(kodiHost, kodiPort).then(function(connection) {
         return connection.Player.GetActivePlayers().then(function (players) {
             connection.GUI.ActivateWindow("home");
             return Promise.all(players.map(function(player) {
